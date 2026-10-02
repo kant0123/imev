@@ -1,0 +1,10 @@
+.claude/settings.local.json
+.claude/worktrees/
+.claude/logs/
+__pycache__/
+*.pyc
+.env
+
+# agy レビューのレポート(生成物なのでコミットしない)
+review/work/*
+!review/work/.gitkeep
