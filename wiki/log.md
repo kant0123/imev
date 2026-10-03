@@ -41,6 +41,6 @@ grep "^## \[" wiki/log.md | tail -5
 - 更新: [[overview]], [[recurring-review-findings]]
 - 備考: i3-8100 + UHD 630 での実測を元に、zenz の読み込み・GPU DLL の差し替え・op_offload・再帰層モデルの巻き戻し不可など、踏んだ落とし穴を [[rerank-poc]] に記録した。Issue #1。
 
-## [2026-10-04] ingest | dGPU 機(RX 9060 XT)での再測定結果を反映
+## [2026-10-04] ingest | PR #7 dGPU 機(RX 9060 XT)での再測定結果を反映
 - 更新: [[rerank-poc]]
 - 備考: GPU 競合で汚れた回を破棄して取り直した経緯と、dGPU でも推奨構成は変わらない結論を記録。Issue #5。
