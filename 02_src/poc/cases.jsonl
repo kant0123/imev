@@ -1,0 +1,11 @@
+{"reading": "きしゃ", "candidates": ["記者", "貴社", "汽車", "帰社"], "context": "新聞社の取材を受けた。質問してきた", "answer": "記者"}
+{"reading": "きしゃ", "candidates": ["記者", "貴社", "汽車", "帰社"], "context": "平素より大変お世話になっております。さて、", "answer": "貴社"}
+{"reading": "きしゃ", "candidates": ["記者", "貴社", "汽車", "帰社"], "context": "鉄道博物館で蒸気機関車を見た。昔の", "answer": "汽車"}
+{"reading": "きしゃ", "candidates": ["記者", "貴社", "汽車", "帰社"], "context": "外出先での打ち合わせが終わったので、これから", "answer": "帰社"}
+{"reading": "こうえん", "candidates": ["公園", "講演", "公演", "後援"], "context": "天気がいいので子供を連れて近所の", "answer": "公園"}
+{"reading": "こうえん", "candidates": ["公園", "講演", "公演", "後援"], "context": "学会で著名な教授の", "answer": "講演"}
+{"reading": "こうえん", "candidates": ["公園", "講演", "公演", "後援"], "context": "劇団の千秋楽の", "answer": "公演"}
+{"reading": "いどう", "candidates": ["移動", "異動", "異同"], "context": "来月の人事で大阪支社に", "answer": "異動"}
+{"reading": "いどう", "candidates": ["移動", "異動", "異同"], "context": "次の会場まではバスで", "answer": "移動"}
+{"reading": "かんしん", "candidates": ["関心", "感心", "歓心"], "context": "最近は環境問題に強い", "answer": "関心"}
+{"reading": "かんしん", "candidates": ["関心", "感心", "歓心"], "context": "彼の丁寧な仕事ぶりにはいつも", "answer": "感心"}

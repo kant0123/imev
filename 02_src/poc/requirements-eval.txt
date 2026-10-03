@@ -1,0 +1,10 @@
+# ASCII only: pip on Japanese Windows reads this file as cp932.
+# llama-cpp-python is used only for its ctypes bindings; the actual compute DLLs come
+# from the official llama.cpp release pinned in run_eval.py (LLAMA_BUILD). Changing this
+# version can break the ABI match with that release.
+--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+--only-binary llama-cpp-python
+llama-cpp-python==0.3.36
+numpy
+huggingface_hub
+gguf

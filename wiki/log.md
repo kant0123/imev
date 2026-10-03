@@ -35,3 +35,8 @@ grep "^## \[" wiki/log.md | tail -5
 ## [2026-10-03] ingest | エージェントルール汎用テンプレート(agy レビュー付き)を導入
 - 更新: [[overview]], [[recurring-review-findings]]
 - 備考: テンプレート(kant0123/ai-coding-template の bc84ddf)をコピーして Wiki の骨組みを作った。テンプレート自身の log エントリ(PR #33〜#35)は別リポジトリの履歴なので持ち込んでいない。[[recurring-review-findings]] の実例はテンプレート側の PR 番号のまま残してある。
+
+## [2026-10-04] ingest | PR #2 候補リランキング PoC と GPU 再調査用の評価ハーネスを追加
+- 新規: [[rerank-poc]]
+- 更新: [[overview]], [[recurring-review-findings]]
+- 備考: i3-8100 + UHD 630 での実測を元に、zenz の読み込み・GPU DLL の差し替え・op_offload・再帰層モデルの巻き戻し不可など、踏んだ落とし穴を [[rerank-poc]] に記録した。Issue #1。

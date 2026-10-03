@@ -23,6 +23,10 @@ Wiki 全ページのカタログ。質問に答えるとき・作業に着手す
 
 - [[overview]] — システム全体像と各ページへの入口
 
+## Components — モジュール・機能単位 (`components/`)
+
+- [[rerank-poc]] — 文脈つき候補リランキングの PoC と評価ハーネス(02_src/poc)。llama.cpp の KV 操作・GPU DLL 差し替え・zenz 読み込みの落とし穴
+
 ## Concepts — 横断的な仕組み・設計判断 (`concepts/`)
 
 - [[recurring-review-findings]] — レビューで妥当と判定された指摘を誤りの種類ごとに集約した台帳。着手時と push 前に読む

@@ -1,7 +1,7 @@
 ---
 type: concept
 summary: レビューで妥当と判定された指摘を誤りの種類ごとに集約した台帳。着手時と push 前に読む
-updated: 2026-10-03
+updated: 2026-10-04
 related: [overview]
 ---
 
@@ -57,6 +57,7 @@ push 前に確かめること:
 - PR #20 — `review/agy_review.py` パスの解決 — Windows で不正な文字を含むパスで `OSError`
 - PR #33 — `review/agy_review.py has_unverified_critical()` — 評価の理由文に「未確認」があるだけで判定語と取り違えていた
 - PR #33 — `review/agy_review.py has_unverified_critical()` — 過去の評価も見ていて、記録し直しても差し止めが解けなかった
+- imev PR #2 — `02_src/poc/run_eval.py fetch_models()` — 例外を出さない `sh()` で GGUF のメタデータ書き換えを呼び、失敗しても出力ファイルが無いまま後段のベンチへ進んでいた
 
 ### 新しく足した分岐・関数にテストが無い
 
