@@ -44,8 +44,10 @@ Mozc への組み込み(C++ 化、Rewriter 追加)はしない。
 - **llama-cpp-python と llama.cpp DLL の版は組で固定する。** 0.3.36 × b11352 で ABI 互換を確認済み。片方だけ上げると構造体がずれうる。
 - **再帰層を持つモデル(Qwen3.5 系)は KV を途中位置まで巻き戻せない。** `llama_memory_seq_rm` の部分削除が False を返し、そのまま decode すると失敗する。`_rollback()` は全消去して流し直す(遅い)。候補の分岐(`seq_cp` で丸ごと複製)は動く。
 - **logits バッファは n_batch × 語彙数 × 4 バイト確保される。** 語彙 15 万の Qwen3 で n_batch=512 にすると +300MB。PoC は 64。
+- **他の GPU タスクが動いていると GPU の行が遅く出る。** 評価中に別タスクが GPU を使っていたため、ベンチごと破棄して取り直した。測定前に GPU が空いていることを確認する(`run_eval.py` は検出しない)。
 - **日本語 Windows の pip は requirements を cp932 で読む。** `requirements-eval.txt` に日本語コメントを書くと導入が失敗する。
 
 ## 経緯
 
 - 2026-10-03〜04: i3-8100(4C/4T)で測定。zenz-v3.1-small が rank 8.7ms・11 問中 10 で最良。Qwen3-0.6B は尤度方式 9/11・48ms、選択式 7/11・335ms。内蔵 GPU(UHD 630, Vulkan)はすべての条件で CPU より遅かった。数値は `02_src/poc/results/` と設計書 §2〜§4。Issue #1。
+- 2026-10-04: i5-12600K + RX 9060 XT(Vulkan)で全 6 モデルを再測定。dGPU では UHD 630 と逆に GPU が速い(zenz-small 6.3→1.9ms、Qwen3.5-4B 尤度方式 275→29.1ms・11/11)が、zenz-small は CPU でも予算内なので推奨は不変。4B は 11 問・最大 35.8ms のため保留。選択式は尤度方式より明確に正確でなく不採用。SemIf 本家との照合は NVIDIA が無く未実施。数値は設計書 §2.4。Issue #5。
