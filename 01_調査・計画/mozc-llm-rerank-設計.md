@@ -150,6 +150,25 @@ Rewriter はどのセッション（アプリ）から呼ばれたかを知り�
 2. 自前のローリングバッファ（`Finish` で追記、60〜120 文字）。ただし `segments.history_segments()` の連結文字列がバッファの末尾と一致するときだけ信用する。Mozc 自身も `EngineConverter::OnStartComposition`（`engine/engine_converter.cc:1839`）で同じ整合チェックをして履歴を捨てています。
 3. どちらも無ければ history segments のみ（最大 4 文節。`converter/segments.cc:406`）。
 
+#### 文脈の区切り(基本方針・安全原則)
+
+文脈は「同じ入力先の直前の文章」だけが価値を持つ。別のテキストボックスやウィンドウの文を混ぜると、文脈なしより悪化しうる。以下は Mozc の実装詳細に依存しない方針で、実装調査(Issue #8)の結果で変わるのは手段だけ。
+
+- **原則: 誤った文脈は、文脈なしより悪い。** 同じ入力先と確認できない文脈は使わず、捨てる。迷ったら文脈なしで採点するか、LM を使わず Mozc の元の順序を返す(フェイルオープン、§3.2)。
+- **優先順位:** ①クライアントが渡すカーソル前テキスト → ②自前のローリングバッファ(履歴セグメントとの整合を確認できたものだけ)→ ③履歴セグメントのみ → ④文脈なし。上位が使えないときだけ下位に落とす。
+- **バッファを捨てる契機(手段は Issue #8 で確認):** フォーカス・入力先の変更、シークレットモード・パスワード欄、`Revert` / `Clear`、整合検査の不一致、一定時間の経過(閾値は未定。測って決める)。
+- **持ち越さない:** 入力先をまたいで文脈を引き継がない。入力先ごとにバッファを別々に持つ案は、入力先を識別できると確認できてから判断する(未確定)。
+- **記録の扱い:** 捨てた文脈は、案C のログにも残さない。
+
+**実装調査の結果(Issue #8。`google/mozc@c7538e6`、パスは `src/` 基準):**
+
+1. **Windows は `preceding_text` を渡すが、最大 20 文字。** `win32/tip/tip_surrounding_text.cc` の `kMaxSurroundingLength = 20`。`win32/tip/tip_keyevent_handler.cc FillMozcContextForOnKey()` が `OnKey` のたびに埋める。TSF のフルコンテキストが取れないとき(`TipTransitoryExtension::AsFullContext` が null)は IMM32 の document feed に落ち、`TipSurroundingText::Get()` が失敗すれば埋まらない。→ ①は「入力先の同一性の確認」には使えるが、文脈そのものは**自前のローリングバッファ(②)が主**になる。どのアプリで埋まらないかは実機未確認。
+2. **フォーカス変更の信号は `Context.revision` として届く。** `win32/tip/tip_text_service.cc OnSetFocus()` が `IncrementFocusRevision()` し、`FillMozcContextCommon()` が `revision` に詰める。`protocol/commands.proto:531` が「フォーカスが変わったら更新し、変換器は履歴を捨てること」と定めている。Mozc 自身は `engine/engine_converter.cc OnStartComposition()` で revision が変わり、かつ `preceding_text` と履歴が整合しないときに履歴を捨てる。→ 区切りの契機は revision の変化。Rewriter の `Rewrite()` / `Finish()` は `ConversionRequest::context()`(`request/conversion_request.h:170`)経由で `revision` を読める。
+3. **Rewriter は 1 プロセスに 1 つ、全セッション共有。** `session/session_handler.h` の `SessionHandler` が `engine_` を 1 つ持ち、各 `Session` は `engine.CreateEngineConverter()`(`session/session.cc:226`)で自分の `EngineConverter` を作る(履歴セグメントはセッションごと)。`SessionHandler::MaybeReloadEngine()` で engine ごと差し替わりうるため、採点器は Rewriter の外に持ち、差し替えに耐える設計にする。複数アプリが同時に打つので、バッファは入力先(revision と対応する単位)ごとに分けるか、切り替わったら捨てる。
+4. **シークレット・パスワードの信号は弱い。** `incognito_mode` は設定(`Config`)かリクエスト単位のフラグで、入力欄ごとの検出ではない(`request/conversion_request.h:195`)。パスワード欄は `Context.input_field_type == PASSWORD`(`protocol/commands.proto`)で表現でき、`Session` はこれを見て確定する(`session/session.cc CommitIfPassword()`)が、Windows の TSF クライアントがこの値を詰める箇所は `win32/` に見つからなかった(`tip_input_mode_manager.cc:66` に InputScope のコメントがあるのみで未確認)。→ Windows ではパスワード欄を確実に判別できない前提で、**文脈をログへ残さない**・永続化しない側に倒す。
+
+方針への反映: ②の優先度は §3.4 の記載より高い(Windows では ① が 20 文字まで)。リセット契機は「`revision` の変化」を第一にし、時間減衰を併用する。入力先ごとの別バッファは `revision` が単位なら実現できるが、同じ入力先に戻っても `revision` は増え続けるため(再利用されない)、戻ったときの文脈復元はできない。
+
 ### 3.5 もう 1 つの口: `SupplementalModelInterface`
 
 Mozc には外部モデル用の差し込み口 `engine::SupplementalModelInterface`（`engine/supplemental_model_interface.h`）が既にあり、`RescoreResults(request, span<Result>)` がサジェスト経路の `DictionaryPredictor::MaybeRescoreResults`（`prediction/dictionary_predictor.cc:1090`）から呼ばれます。OSS 版は空のスタブで、`ModulesPresetBuilder::PresetSupplementalModel`（`engine/modules.cc:255`）で差し替えられます。
