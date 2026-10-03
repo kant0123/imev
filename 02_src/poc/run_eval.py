@@ -91,8 +91,11 @@ def fetch_models(work: Path, only: set[str] | None) -> list[dict]:
             # llama-bench は kv_override を取れないので、未知の pre-tokenizer 名を消したコピーを使う
             bench = path.with_name(path.stem + "-nopre.gguf")
             if not bench.exists():
-                sh([sys.executable, "-m", "gguf.scripts.gguf_new_metadata", "--remove-metadata",
-                    "tokenizer.ggml.pre", "--force", str(path), str(bench)])
+                res = sh([sys.executable, "-m", "gguf.scripts.gguf_new_metadata", "--remove-metadata",
+                          "tokenizer.ggml.pre", "--force", str(path), str(bench)])
+                # sh() は失敗しても例外を出さない。コピーが無いまま進むとベンチが全滅するので止める
+                if not bench.exists():
+                    raise RuntimeError(f"{bench} を作れなかった:\n{res[-1500:]}")
         out.append({"key": key, "path": str(path), "bench": str(bench), "styles": styles,
                     "mb": round(path.stat().st_size / 2**20)})
     return out

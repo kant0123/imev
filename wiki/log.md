@@ -38,5 +38,5 @@ grep "^## \[" wiki/log.md | tail -5
 
 ## [2026-10-04] ingest | PR #2 候補リランキング PoC と GPU 再調査用の評価ハーネスを追加
 - 新規: [[rerank-poc]]
-- 更新: [[overview]]
+- 更新: [[overview]], [[recurring-review-findings]]
 - 備考: i3-8100 + UHD 630 での実測を元に、zenz の読み込み・GPU DLL の差し替え・op_offload・再帰層モデルの巻き戻し不可など、踏んだ落とし穴を [[rerank-poc]] に記録した。Issue #1。
