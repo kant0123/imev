@@ -44,3 +44,7 @@ grep "^## \[" wiki/log.md | tail -5
 ## [2026-10-04] ingest | PR #7 dGPU 機(RX 9060 XT)での再測定結果を反映
 - 更新: [[rerank-poc]]
 - 備考: GPU 競合で汚れた回を破棄して取り直した経緯と、dGPU でも推奨構成は変わらない結論を記録。Issue #5。
+
+## [2026-10-04] ingest | PR #9 レビューで妥当だった指摘を台帳に追加
+- 更新: [[recurring-review-findings]]
+- 備考: 設計書の調査結果と別節の安全策が矛盾していた件。Issue #8。
