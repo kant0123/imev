@@ -136,7 +136,7 @@ Converter::StartConversion … converter/converter.cc:178
 
 - `ContextRerankRewriter::Finish(const ConversionRequest&, const Segments&)` で、確定された `segment.candidate(0).value` を連結して採点器に渡す。`FinishConversion` は Enter 確定（`EngineConverter::Commit` :745）、サジェスト確定（:811）、未変換確定（`CommitPreedit` :953）のすべてから呼ばれます。
 - KV の更新は**ワーカースレッドに投げて即リターン**します。確定のたびに 30〜70ms（実測: 20〜30 トークンの文脈で中央値 33ms）ブロックすると Enter が重くなります。更新が終わる前に次の変換が来ても、§3.4 の同期方式なら残りを変換側が流すだけで結果は変わりません。
-- `UserSegmentHistoryRewriter::IsAvailable` / `Finish`（`rewriter/user_segment_history_rewriter.cc:619, :694`）と同じ条件で止める: `request.incognito_mode()`、`history_learning_level != DEFAULT_HISTORY`、パスワード欄。
+- `UserSegmentHistoryRewriter::IsAvailable` / `Finish`（`rewriter/user_segment_history_rewriter.cc:619, :694`）と同じ条件で止める: `request.incognito_mode()`、`history_learning_level != DEFAULT_HISTORY`、パスワード欄(ただし Windows ではパスワード欄を判別できる信号が確認できていない。§3.4「文脈の区切り」の調査結果 4。判別できない前提で、永続化はせずメモリ上のバッファも短く保つ)。
 - 併せて実装するフック: `Revert()`（確定取り消し → 文脈を巻き戻す）、`Clear()`（「履歴を消去」→ 文脈・ログ・アダプタを消す）。
 - このとき「LM の 1 位とユーザーの選択が違った」事例を §5 案C 用にログへ追記します。
 
@@ -144,7 +144,7 @@ Converter::StartConversion … converter/converter.cc:178
 
 Rewriter はどのセッション（アプリ）から呼ばれたかを知りません。そこで **KV をセッション ID ではなくトークン列で同期**します。毎回「今あるべきプレフィックス」を作り、KV 上のトークン列との最長共通接頭辞までを再利用して残りだけ流す方式です（PoC の `_sync`）。同じアプリで打ち続ける限りコストはゼロ、アプリを切り替えたら自動的に作り直しになります。
 
-文脈文字列の出どころ（優先順）:
+文脈文字列の出どころ(**優先順位の正は下の「文脈の区切り」節**。Windows では ① が最大 20 文字しか来ないため、文脈の主役は ② になる):
 
 1. `request.context().preceding_text()`（`protocol/commands.proto:496`）。クライアントがカーソル前のテキストを渡してくれる場合はこれが正。`ConversionRequest::GetSurroundingContext()`（`request/conversion_request.h:225`）は改行で切った版を返します。
 2. 自前のローリングバッファ（`Finish` で追記、60〜120 文字）。ただし `segments.history_segments()` の連結文字列がバッファの末尾と一致するときだけ信用する。Mozc 自身も `EngineConverter::OnStartComposition`（`engine/engine_converter.cc:1839`）で同じ整合チェックをして履歴を捨てています。
@@ -155,19 +155,19 @@ Rewriter はどのセッション（アプリ）から呼ばれたかを知り�
 文脈は「同じ入力先の直前の文章」だけが価値を持つ。別のテキストボックスやウィンドウの文を混ぜると、文脈なしより悪化しうる。以下は Mozc の実装詳細に依存しない方針で、実装調査(Issue #8)の結果で変わるのは手段だけ。
 
 - **原則: 誤った文脈は、文脈なしより悪い。** 同じ入力先と確認できない文脈は使わず、捨てる。迷ったら文脈なしで採点するか、LM を使わず Mozc の元の順序を返す(フェイルオープン、§3.2)。
-- **優先順位:** ①クライアントが渡すカーソル前テキスト → ②自前のローリングバッファ(履歴セグメントとの整合を確認できたものだけ)→ ③履歴セグメントのみ → ④文脈なし。上位が使えないときだけ下位に落とす。
+- **優先順位(文脈の主役の順):** ①自前のローリングバッファ(履歴セグメントとの整合を確認できたものだけ)→ ②クライアントが渡すカーソル前テキスト(Windows は最大 20 文字なので、単独で使うときは短い縮退文脈。バッファが同じ入力先のものかを確かめる照合にも使う)→ ③履歴セグメントのみ → ④文脈なし。上位が使えないときだけ下位に落とす。
 - **バッファを捨てる契機(手段は Issue #8 で確認):** フォーカス・入力先の変更、シークレットモード・パスワード欄、`Revert` / `Clear`、整合検査の不一致、一定時間の経過(閾値は未定。測って決める)。
 - **持ち越さない:** 入力先をまたいで文脈を引き継がない。入力先ごとにバッファを別々に持つ案は、入力先を識別できると確認できてから判断する(未確定)。
 - **記録の扱い:** 捨てた文脈は、案C のログにも残さない。
 
 **実装調査の結果(Issue #8。`google/mozc@c7538e6`、パスは `src/` 基準):**
 
-1. **Windows は `preceding_text` を渡すが、最大 20 文字。** `win32/tip/tip_surrounding_text.cc` の `kMaxSurroundingLength = 20`。`win32/tip/tip_keyevent_handler.cc FillMozcContextForOnKey()` が `OnKey` のたびに埋める。TSF のフルコンテキストが取れないとき(`TipTransitoryExtension::AsFullContext` が null)は IMM32 の document feed に落ち、`TipSurroundingText::Get()` が失敗すれば埋まらない。→ ①は「入力先の同一性の確認」には使えるが、文脈そのものは**自前のローリングバッファ(②)が主**になる。どのアプリで埋まらないかは実機未確認。
+1. **Windows は `preceding_text` を渡すが、最大 20 文字。** `win32/tip/tip_surrounding_text.cc` の `kMaxSurroundingLength = 20`。`win32/tip/tip_keyevent_handler.cc FillMozcContextForOnKey()` が `OnKey` のたびに埋める。TSF のフルコンテキストが取れないとき(`TipTransitoryExtension::AsFullContext` が null)は IMM32 の document feed に落ち、`TipSurroundingText::Get()` が失敗すれば埋まらない。→ `preceding_text` は「入力先の同一性の確認」には使えるが、文脈そのものは**自前のローリングバッファが主**になる。どのアプリで埋まらないかは実機未確認。
 2. **フォーカス変更の信号は `Context.revision` として届く。** `win32/tip/tip_text_service.cc OnSetFocus()` が `IncrementFocusRevision()` し、`FillMozcContextCommon()` が `revision` に詰める。`protocol/commands.proto:531` が「フォーカスが変わったら更新し、変換器は履歴を捨てること」と定めている。Mozc 自身は `engine/engine_converter.cc OnStartComposition()` で revision が変わり、かつ `preceding_text` と履歴が整合しないときに履歴を捨てる。→ 区切りの契機は revision の変化。Rewriter の `Rewrite()` / `Finish()` は `ConversionRequest::context()`(`request/conversion_request.h:170`)経由で `revision` を読める。
 3. **Rewriter は 1 プロセスに 1 つ、全セッション共有。** `session/session_handler.h` の `SessionHandler` が `engine_` を 1 つ持ち、各 `Session` は `engine.CreateEngineConverter()`(`session/session.cc:226`)で自分の `EngineConverter` を作る(履歴セグメントはセッションごと)。`SessionHandler::MaybeReloadEngine()` で engine ごと差し替わりうるため、採点器は Rewriter の外に持ち、差し替えに耐える設計にする。複数アプリが同時に打つので、バッファは入力先(revision と対応する単位)ごとに分けるか、切り替わったら捨てる。
 4. **シークレット・パスワードの信号は弱い。** `incognito_mode` は設定(`Config`)かリクエスト単位のフラグで、入力欄ごとの検出ではない(`request/conversion_request.h:195`)。パスワード欄は `Context.input_field_type == PASSWORD`(`protocol/commands.proto`)で表現でき、`Session` はこれを見て確定する(`session/session.cc CommitIfPassword()`)が、Windows の TSF クライアントがこの値を詰める箇所は `win32/` に見つからなかった(`tip_input_mode_manager.cc:66` に InputScope のコメントがあるのみで未確認)。→ Windows ではパスワード欄を確実に判別できない前提で、**文脈・読み・確定結果のいずれも永続化しない**(案C のログは、パスワード欄を判別できる手段が確認できるまで無効にする)。メモリ上のバッファも、確定後すぐ使い切れる長さ(§3.4 の 60〜120 文字)を超えて持たない。
 
-方針への反映: ②の優先度は §3.4 の記載より高い(Windows では ① が 20 文字まで)。リセット契機は「`revision` の変化」を第一にし、時間減衰を併用する。入力先ごとの別バッファは `revision` が単位なら実現できるが、同じ入力先に戻っても `revision` は増え続けるため(再利用されない)、戻ったときの文脈復元はできない。
+方針への反映: 優先順位は上記のとおりバッファを主にした(Windows の `preceding_text` が 20 文字までのため)。リセット契機は「`revision` の変化」を第一にし、時間減衰を併用する。入力先ごとの別バッファは `revision` が単位なら実現できるが、同じ入力先に戻っても `revision` は増え続けるため(再利用されない)、戻ったときの文脈復元はできない。
 
 ### 3.5 もう 1 つの口: `SupplementalModelInterface`
 
