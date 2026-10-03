@@ -165,7 +165,7 @@ Rewriter はどのセッション（アプリ）から呼ばれたかを知り�
 1. **Windows は `preceding_text` を渡すが、最大 20 文字。** `win32/tip/tip_surrounding_text.cc` の `kMaxSurroundingLength = 20`。`win32/tip/tip_keyevent_handler.cc FillMozcContextForOnKey()` が `OnKey` のたびに埋める。TSF のフルコンテキストが取れないとき(`TipTransitoryExtension::AsFullContext` が null)は IMM32 の document feed に落ち、`TipSurroundingText::Get()` が失敗すれば埋まらない。→ ①は「入力先の同一性の確認」には使えるが、文脈そのものは**自前のローリングバッファ(②)が主**になる。どのアプリで埋まらないかは実機未確認。
 2. **フォーカス変更の信号は `Context.revision` として届く。** `win32/tip/tip_text_service.cc OnSetFocus()` が `IncrementFocusRevision()` し、`FillMozcContextCommon()` が `revision` に詰める。`protocol/commands.proto:531` が「フォーカスが変わったら更新し、変換器は履歴を捨てること」と定めている。Mozc 自身は `engine/engine_converter.cc OnStartComposition()` で revision が変わり、かつ `preceding_text` と履歴が整合しないときに履歴を捨てる。→ 区切りの契機は revision の変化。Rewriter の `Rewrite()` / `Finish()` は `ConversionRequest::context()`(`request/conversion_request.h:170`)経由で `revision` を読める。
 3. **Rewriter は 1 プロセスに 1 つ、全セッション共有。** `session/session_handler.h` の `SessionHandler` が `engine_` を 1 つ持ち、各 `Session` は `engine.CreateEngineConverter()`(`session/session.cc:226`)で自分の `EngineConverter` を作る(履歴セグメントはセッションごと)。`SessionHandler::MaybeReloadEngine()` で engine ごと差し替わりうるため、採点器は Rewriter の外に持ち、差し替えに耐える設計にする。複数アプリが同時に打つので、バッファは入力先(revision と対応する単位)ごとに分けるか、切り替わったら捨てる。
-4. **シークレット・パスワードの信号は弱い。** `incognito_mode` は設定(`Config`)かリクエスト単位のフラグで、入力欄ごとの検出ではない(`request/conversion_request.h:195`)。パスワード欄は `Context.input_field_type == PASSWORD`(`protocol/commands.proto`)で表現でき、`Session` はこれを見て確定する(`session/session.cc CommitIfPassword()`)が、Windows の TSF クライアントがこの値を詰める箇所は `win32/` に見つからなかった(`tip_input_mode_manager.cc:66` に InputScope のコメントがあるのみで未確認)。→ Windows ではパスワード欄を確実に判別できない前提で、**文脈をログへ残さない**・永続化しない側に倒す。
+4. **シークレット・パスワードの信号は弱い。** `incognito_mode` は設定(`Config`)かリクエスト単位のフラグで、入力欄ごとの検出ではない(`request/conversion_request.h:195`)。パスワード欄は `Context.input_field_type == PASSWORD`(`protocol/commands.proto`)で表現でき、`Session` はこれを見て確定する(`session/session.cc CommitIfPassword()`)が、Windows の TSF クライアントがこの値を詰める箇所は `win32/` に見つからなかった(`tip_input_mode_manager.cc:66` に InputScope のコメントがあるのみで未確認)。→ Windows ではパスワード欄を確実に判別できない前提で、**文脈・読み・確定結果のいずれも永続化しない**(案C のログは、パスワード欄を判別できる手段が確認できるまで無効にする)。メモリ上のバッファも、確定後すぐ使い切れる長さ(§3.4 の 60〜120 文字)を超えて持たない。
 
 方針への反映: ②の優先度は §3.4 の記載より高い(Windows では ① が 20 文字まで)。リセット契機は「`revision` の変化」を第一にし、時間減衰を併用する。入力先ごとの別バッファは `revision` が単位なら実現できるが、同じ入力先に戻っても `revision` は増え続けるため(再利用されない)、戻ったときの文脈復元はできない。
 
@@ -275,7 +275,7 @@ score(c) = mozc_cost(c) + λ · (−500 · logP_LM(c | 文脈, 読み))
 
 ### 案C: ログからの LoRA 適応 — 後回し
 
-- ログ: `Finish()` で（文脈・読み・候補リスト・LM の 1 位・ユーザーの選択）を、不一致のときだけローカルに保存。シークレットモードとパスワード欄では保存しない。`Clear()` でログとアダプタを消す。
+- ログ: `Finish()` で（文脈・読み・候補リスト・LM の 1 位・ユーザーの選択）を、不一致のときだけローカルに保存。シークレットモードとパスワード欄では保存しない。ただし Windows ではパスワード欄を判別できる信号が確認できていない(§3.4「文脈の区切り」の調査結果 4)ため、**判別手段が確認できるまでログ保存は無効**にする。`Clear()` でログとアダプタを消す。
 - 学習: zenz の本来の目的関数（`文脈 + 読み → 選ばれた表層` の交差エントロピー）で足ります。候補集合上の softmax 損失にすれば「選ばれなかった候補を下げる」選好学習になり、DPO を持ち出す必要はありません。
 - 実行: llama.cpp 側に保守された学習機能は無い前提で、学習は別プロセス（PyTorch + PEFT）で行い、GGUF の LoRA に変換して `llama_adapter_lora_init` / `llama_set_adapters_lora` で読み込みます。95M なら CPU でも現実的ですが、PyTorch をエンドユーザー環境に配る重さが最大の障害です。
 - 安全弁: ログの一部を検証用に残し、適応後に悪化したらアダプタを捨てる。
