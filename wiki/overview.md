@@ -1,8 +1,8 @@
 ---
 type: concept
 summary: システム全体像と各ページへの入口
-updated: 2026-10-03
-related: [recurring-review-findings]
+updated: 2026-10-04
+related: [recurring-review-findings, rerank-poc]
 ---
 
 # imev 全体像
@@ -13,11 +13,13 @@ related: [recurring-review-findings]
 
 ## これは何か
 
-<1〜2 文。何を解決するシステムか>
+Mozc(オープンソース日本語 IME)に小型の言語モデルを組み込み、直前に確定した文を文脈として
+変換候補を並べ替える構想の調査・検証。現時点は PoC 段階で、Mozc 本体には組み込んでいない。
 
 ## 構成
 
-<主要な構成要素と、その関係を 5〜10 行で。各要素は `[[page-name]]` へリンクする>
+- 候補リランキング PoC と評価ハーネス ([[rerank-poc]]) — `02_src/poc/`。llama.cpp で候補を採点し、モデル × 方式 × CPU/GPU を計測する
+- 調査・設計書と引き継ぎ資料 — `01_調査・計画/`(Wiki ではなく計画資料として置いている)
 
 <!-- 例:
 - Web アプリ本体 ([[web-app]]) — Flask。リクエストを受けて DB を読み書きする
