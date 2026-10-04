@@ -45,6 +45,9 @@ foreach ($d in 'llama', 'ggml', 'ggml-base', 'ggml-cpu', 'ggml-rpc') {
 }
 $model = Join-Path $RuntimeDir 'ggml-model-Q5_K_M.gguf'
 if (-not (Test-Path $model)) {
-    Invoke-WebRequest 'https://huggingface.co/Miwa-Keita/zenz-v3.1-small-gguf/resolve/main/ggml-model-Q5_K_M.gguf' -OutFile $model -UseBasicParsing
+    # 中断で途中までのファイルが残ると次回の存在チェックを素通りするので、別名に落としてから改名する
+    $part = "$model.part"
+    Invoke-WebRequest 'https://huggingface.co/Miwa-Keita/zenz-v3.1-small-gguf/resolve/main/ggml-model-Q5_K_M.gguf' -OutFile $part -UseBasicParsing
+    Move-Item $part $model -Force
 }
 Write-Host "runtime: $RuntimeDir"
