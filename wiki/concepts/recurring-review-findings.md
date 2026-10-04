@@ -95,6 +95,7 @@ push 前に確かめること:
 - PR #33 — `.agent/skills/pr-finish/SKILL.md` — PR 本文テンプレートと手順 4 の振り分けに「未確認」が無かった
 - PR #33 — `.agent/skills/agy-review/SKILL.md` フローチャート — 未確認の CRITICAL もマージに至る経路として描いていた(この種類を台帳に足した PR 自身で再発)
 - PR #35 — `wiki/concepts/recurring-review-findings.md` — 「未確認は台帳に載せない」を足したが、同じページの送り先の説明に未確認の行き先が無かった
+- imev PR #19 — `.agent/skills/pr-finish/SKILL.md` — 「前提の確認」に「PR 本文に実機で確かめた例文と結果を書く」を足したが、同じファイルの PR 本文テンプレートに書く欄が無かった
 
 ### 主目的のページ以外に触った Wiki の付随更新を漏らす
 
