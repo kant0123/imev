@@ -65,3 +65,7 @@ grep "^## \[" wiki/log.md | tail -5
 ## [2026-10-05] ingest | PR #24 Chrome で自前ビルドの Mozc が使えない原因(ESET)を導入手順に記録
 - 更新: [[mozc-build-install]]
 - 備考: コードの不具合ではなく、ESET の「すべてのブラウザーを保護」が署名の無い `mozc_tip64.dll` を Chrome に読み込ませていなかった。ESET に DLL の除外設定は無く、保護を無効にして解消。Issue #14。
+
+## [2026-10-05] query | Issue #25 ESET の保護を有効にしたまま自前ビルドの Mozc を Chrome で使う方法の検証
+- 更新: [[mozc-build-install]]
+- 備考: 自己署名で署名した TIP DLL は、署名のみでも、証明書を Windows の信頼ストアに入れた場合でも Chrome で読み込まれなかった。正規の署名証明書・ESET への提出は未検証で、個人利用では見合わないとして保護を無効にする運用のまま閉じた。
