@@ -40,6 +40,12 @@ Mozc(オープンソース日本語 IME)に小型の言語モデルを組み込�
   赤になるものだけを見る: パッチが基準コミット(`02_src/mozc/mozc-base-commit.txt`)の google/mozc に
   `git apply --check` で当たるか、レビュー基盤と hook のテスト、Python / シェル / PowerShell の構文、`.ps1` の BOM。
   **CI が緑でもパッチがコンパイルできる保証は無い**ので、パッチを変えたら実機での確認が要る。
+- **main はブランチ保護済み**(2026-10-05 適用)。必須チェックは `checks` と `mozc-patch`。承認レビューは必須にしていない
+  (1 人開発では自分の PR を承認できず、誰もマージできなくなる)。管理者は迂回できる(`enforce_admins: false`)。
+  保護設定は GitHub 側にあり、リポジトリのファイルからは見えない。正は `.github/branch-protection.json`
+  (再適用コマンドは `docs/development_workflow.md`)。**`test.yml` のジョブ名を変えたら、このファイルと保護設定の
+  両方を直す。** ずれると必須チェックが一度も実行されず、PR が永久に pending のままマージできなくなる。
+  agy レビューは CI のチェックではないので保護では強制されず、マージ時の hook が止める。
 - 導入当初の CI はテンプレートのまま `requirements.txt` の有無で判定していて、何も検査せずに緑になっていた
   (Issue #13 で置き換え)。どの検査も「対象 0 件で成功」に落ちないようにしてある。
 - agy レビューは IME 向けのドメイン `ime`(`review/domain_invariants.json`)で回す。テンプレート既定の
