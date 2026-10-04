@@ -279,7 +279,8 @@ CI のワークフローではなく、**CI が緑になった後にエージェ
   メインツリーに反映されるまで(方式 B ならデプロイ完了まで)はレビューを素通しする。
   導入手順と注意点は [review/README.md](../review/README.md) の「導入するときの注意」。
 - ドメイン不変条件は `--domain` か環境変数 `REVIEW_DOMAIN` で切り替える
-  (`general` / `fintech` / `distributed` / `healthcare` / `embedded`)。未設定なら `general`。
+  (`ime` / `general` / `fintech` / `distributed` / `healthcare` / `embedded`)。未設定なら `ime`
+  (imev 向けに足したもの。テンプレートの既定は `general`)。
 
 ### `label-hygiene`(オプション)
 
