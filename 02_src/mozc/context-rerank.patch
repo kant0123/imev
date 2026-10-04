@@ -44,14 +44,15 @@ index 4bbcdde..78da6c2 100644
          ":dice_rewriter",
 diff --git a/src/rewriter/context_rerank_rewriter.cc b/src/rewriter/context_rerank_rewriter.cc
 new file mode 100644
-index 0000000..43c7751
+index 0000000..9eb7ce0
 --- /dev/null
 +++ b/src/rewriter/context_rerank_rewriter.cc
-@@ -0,0 +1,133 @@
+@@ -0,0 +1,169 @@
 +#include "rewriter/context_rerank_rewriter.h"
 +
 +#include <algorithm>
 +#include <cstddef>
++#include <cstdio>
 +#include <cstdlib>
 +#include <string>
 +#include <vector>
@@ -97,6 +98,25 @@ index 0000000..43c7751
 +  return std::string(s.substr(pos));
 +}
 +
++// Diagnostic log lines carry counts and scores only, never user text.
++std::string JoinNumbers(const std::vector<double>& v) {
++  std::string out;
++  for (size_t i = 0; i < v.size(); ++i) {
++    char buf[32];
++    snprintf(buf, sizeof(buf), "%s%.1f", i ? "," : "", v[i]);
++    out += buf;
++  }
++  return out;
++}
++
++std::string JoinSizes(const std::vector<size_t>& v) {
++  std::string out;
++  for (size_t i = 0; i < v.size(); ++i) {
++    out += (i ? "," : "") + std::to_string(v[i]);
++  }
++  return out;
++}
++
 +}  // namespace
 +
 +int ContextRerankRewriter::capability(const ConversionRequest& request) const {
@@ -112,13 +132,18 @@ index 0000000..43c7751
 +
 +  // Text left of the cursor, else the committed history segments.
 +  std::string context = request.GetSurroundingContext().first;
++  const char* source = "surrounding";
 +  if (context.empty()) {
++    source = "history";
 +    for (size_t i = 0; i < segments->history_segments_size(); ++i) {
 +      const Segment& h = segments->segment(i);
 +      if (h.candidates_size() > 0) context += h.candidate(0).value;
 +    }
 +  }
 +  context = Tail(context, kMaxContextChars);
++  scorer.LogLine(std::string("rewrite: ctx src=") + source + " " +
++                 std::to_string(context.size()) + "B, segs " +
++                 std::to_string(segments->conversion_segments_size()));
 +  // Without context the LM only duplicates Mozc's own language model.
 +  if (context.empty()) return false;
 +
@@ -128,6 +153,10 @@ index 0000000..43c7751
 +    const size_t k = std::min(seg->candidates_size(), kMaxRerankSize);
 +    if (seg->segment_type() == Segment::FIXED_VALUE || k < 2 ||
 +        Util::GetScriptType(seg->key()) != Util::HIRAGANA) {
++      scorer.LogLine("seg " + std::to_string(si) + " skip: " +
++                     (seg->segment_type() == Segment::FIXED_VALUE
++                          ? "fixed"
++                          : k < 2 ? "one candidate" : "key not hiragana"));
 +      if (seg->candidates_size() > 0) context += seg->candidate(0).value;
 +      continue;
 +    }
@@ -141,6 +170,7 @@ index 0000000..43c7751
 +    }
 +    const size_t n = slots.size();
 +    if (n < 2) {
++      scorer.LogLine("seg " + std::to_string(si) + " skip: kana-only cands");
 +      context += seg->candidate(0).value;
 +      continue;
 +    }
@@ -165,6 +195,12 @@ index 0000000..43c7751
 +    std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b) {
 +      return final_cost[a] < final_cost[b];
 +    });
++
++    // slots: Mozc rank of each scored candidate; lp: LM log-prob; cost: the
++    // combined score (lower wins); order: new position -> index into slots.
++    scorer.LogLine("seg " + std::to_string(si) + " rerank: slots " +
++                   JoinSizes(slots) + " lp " + JoinNumbers(lp) + " cost " +
++                   JoinNumbers(final_cost) + " order " + JoinSizes(order));
 +
 +    // Reorder only within the eligible slots; kana candidates keep their index.
 +    std::vector<converter::Candidate> picked;
@@ -228,10 +264,10 @@ index 0000000..3a85920
 +)
 diff --git a/src/rewriter/llm_scorer.cc b/src/rewriter/llm_scorer.cc
 new file mode 100644
-index 0000000..3a3cc9e
+index 0000000..dff5de0
 --- /dev/null
 +++ b/src/rewriter/llm_scorer.cc
-@@ -0,0 +1,490 @@
+@@ -0,0 +1,495 @@
 +#include "rewriter/llm_scorer.h"
 +
 +#include <algorithm>
@@ -269,6 +305,7 @@ index 0000000..3a3cc9e
 +  return *instance;
 +}
 +bool LlmScorer::IsReady() const { return false; }
++void LlmScorer::LogLine(const std::string&) {}
 +std::vector<double> LlmScorer::Score(absl::string_view,
 +                                     absl::string_view,
 +                                     const std::vector<std::string>&) {
@@ -693,6 +730,10 @@ index 0000000..3a3cc9e
 +  return *instance;
 +}
 +
++void LlmScorer::LogLine(const std::string& line) {
++  AppendLog(impl_->log_dir, line);
++}
++
 +bool LlmScorer::IsReady() const {
 +  if (impl_->ready.load()) return true;
 +  static std::atomic<int> calls{0};
@@ -724,10 +765,10 @@ index 0000000..3a3cc9e
 +}  // namespace mozc
 diff --git a/src/rewriter/llm_scorer.h b/src/rewriter/llm_scorer.h
 new file mode 100644
-index 0000000..111a1c9
+index 0000000..3f2d4fb
 --- /dev/null
 +++ b/src/rewriter/llm_scorer.h
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,42 @@
 +// Experimental: scores conversion candidates with a small conversion LM
 +// (zenz-v3, via a dynamically loaded llama.cpp). Everything fails open: when
 +// the runtime or the model is missing, Score() returns an empty vector.
@@ -748,6 +789,10 @@ index 0000000..111a1c9
 +
 +  // True once the model has been loaded (loading runs on a worker thread).
 +  bool IsReady() const;
++
++  // Appends one line to rerank.log (no-op where logging is unavailable).
++  // Callers must pass counts and timings only, never user text.
++  void LogLine(const std::string& line);
 +
 +  // Returns log P(candidate | context, reading) for each candidate, in order,
 +  // or an empty vector when scoring is unavailable or fails.
