@@ -59,6 +59,6 @@ grep "^## \[" wiki/log.md | tail -5
 - 備考: `deploy/`・deploy ワークフロー・テンプレート用の `scripts/setup.*`、docs と review/README の CD 前提の記述(本番同居・`/healthz`・方式 B)を削除。branch-protection.json の必須チェック名を旧 `test` から現行の `checks` / `mozc-patch` に直した(未適用。main は保護されていない)。Issue #18。
 
 ## [2026-10-05] ingest | PR #23 main のブランチ保護の適用を記録
-- 更新: [[overview]]
-- 備考: 必須チェック `checks` / `mozc-patch` で main を保護した(Issue #18 の項目の「未適用」はこの時点で古くなった)。保護は GitHub 側の設定でファイルから見えないため、適用済みであることとジョブ名を変えるときの注意を overview と test.yml に残した。Issue #22。
+- 更新: [[overview]], [[recurring-review-findings]]
+- 備考: 必須チェック `checks` / `mozc-patch` で main を保護した(Issue #18 の項目の「未適用」はこの時点で古くなった)。保護は GitHub 側の設定でファイルから見えないため、適用済みであることとジョブ名を変えるときの注意を overview と test.yml に残し、必須チェック名とジョブ名の一致を CI(checks ジョブ)でも検査するようにした。Issue #22。
 
