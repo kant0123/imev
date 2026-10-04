@@ -2,13 +2,13 @@
 type: component
 summary: 文脈つき候補リランキングの PoC と評価ハーネス(02_src/poc)。llama.cpp の KV 操作・GPU DLL 差し替え・zenz 読み込みの落とし穴
 updated: 2026-10-04
-related: [overview]
+related: [overview, mozc-context-rerank, engine-base-choice]
 ---
 
 # 候補リランキング PoC と評価ハーネス
 
 Mozc の変換候補を、直前の確定文を文脈にした小型 LM で並べ替える構想の検証コード。
-Mozc 本体にはまだ組み込んでいない。設計の全体と Mozc 側のフック位置は
+Mozc への組み込みは [[mozc-context-rerank]](採点方式はここと同じ)。設計の全体と Mozc 側のフック位置は
 `01_調査・計画/mozc-llm-rerank-設計.md`、GPU 機での再評価手順は `01_調査・計画/GPU再調査-引き継ぎ.md`。
 
 ## 責務
@@ -32,7 +32,7 @@ Mozc への組み込み(C++ 化、Rewriter 追加)はしない。
 ## 依存関係
 
 - 依存している: llama-cpp-python 0.3.36(ctypes バインディングのみ)、llama.cpp 公式リリース b11352 の DLL、Hugging Face のモデル
-- 依存されている: なし(Mozc 組み込み前)
+- 依存されている: [[mozc-context-rerank]](プロンプト形式と KV 同期の方式を C++ に移した。コードの共有は無い)
 
 ## 落とし穴
 

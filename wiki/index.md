@@ -25,11 +25,17 @@ Wiki 全ページのカタログ。質問に答えるとき・作業に着手す
 
 ## Components — モジュール・機能単位 (`components/`)
 
+- [[mozc-context-rerank]] — Mozc に載せた文脈リランカー(ContextRerankRewriter + LlmScorer)。02_src/mozc のパッチ。サンドボックス・学習との順序・かな候補の扱いの落とし穴
 - [[rerank-poc]] — 文脈つき候補リランキングの PoC と評価ハーネス(02_src/poc)。llama.cpp の KV 操作・GPU DLL 差し替え・zenz 読み込みの落とし穴
 
 ## Concepts — 横断的な仕組み・設計判断 (`concepts/`)
 
+- [[engine-base-choice]] — 変換エンジンの土台に Mozc 本家を選んだ理由。Ohagey(azooKey + Zenzai)の評価結果と採用しなかった点
 - [[recurring-review-findings]] — レビューで妥当と判定された指摘を誤りの種類ごとに集約した台帳。着手時と push 前に読む
+
+## Operations — 運用手順・障害対応 (`operations/`)
+
+- [[mozc-build-install]] — リランカー入り Mozc のビルドと入れ直し(Windows)。UNC パス不可・同版 MSI が上書きしない・反映確認はハッシュで
 <!-- wiki-index:end -->
 
 ## 未作成ページ (リンクだけ存在する / これから書く)
