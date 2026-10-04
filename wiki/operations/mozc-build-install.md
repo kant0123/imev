@@ -1,7 +1,7 @@
 ---
 type: operation
-summary: リランカー入り Mozc のビルドと入れ直し(Windows)。UNC パス不可・同版 MSI が上書きしない・反映確認はハッシュで
-updated: 2026-10-04
+summary: リランカー入り Mozc のビルドと入れ直し(Windows)。UNC パス不可・同版 MSI が上書きしない・反映確認はハッシュで・ESET が Chrome で止める
+updated: 2026-10-05
 related: [mozc-context-rerank, overview]
 ---
 
@@ -41,5 +41,16 @@ Mozc 自体のビルド環境(bazelisk・LLVM・MSYS2・Qt)は Mozc の `docs/bu
 - **管理者で起動した PowerShell からはネットワークドライブ(割り当てた G: など)が見えない。** `reinstall.ps1` を
   ネットワークドライブ上から管理者実行すると、何も出力せずに失敗する。ローカルドライブにコピーして実行する。
 - **Git Bash からは Bazel のターゲット名(`//...`)が MSYS にパス変換される。** `MSYS_NO_PATHCONV=1`。
+- **ESET の「すべてのブラウザーを保護」が有効だと、Chrome では自前ビルドの Mozc が使えない。** 半角/全角に反応せず、
+  Microsoft IME に切り替わることもある。他のアプリ(サクラエディタ等)では動く。ESET の保護されたブラウザは
+  信頼できない(署名の無い)DLL の読み込みを止め、自前ビルドの `mozc_tip64.dll` は署名が無いため。
+  DLL 単位の除外設定は ESET に無く、「詳細設定 → 保護 → ブラウザーの保護 → バンキングとブラウジング保護」で
+  「すべてのブラウザーを保護」を無効にし、Chrome を起動し直して解消した。設定直後の 1 回目の再起動では直らず、
+  その後の再起動で直った(差の原因は未確認)。同じ報告: google/mozc discussion #805。Issue #14。
+  - 切り分けの記録: `chrome://conflicts` では Mozc TIP Module が「Process types: None」(IME として列挙されているが
+    どのプロセスにも読み込まれていない)。Chrome は自プロセスのモジュール一覧・コマンドラインを外から読ませない
+    (`tasklist /m` は N/A)ので、DLL が入ったかは外からは見えない。`--user-data-dir=<一時フォルダ>` で別インスタンスの
+    Chrome を起動して試すと、普段のプロフィールを壊さずに切り分けられる。Chrome 自身の外部 DLL ブロックは
+    登録済み IME を対象外にしており、原因ではなかった。
 - TSF は mozc_tip32/64 の両方が入り、変換は共通の mozc_server で行う。リランカーはサーバー側なので
   32 ビットアプリでも同じく効く想定(32 ビットアプリでの動作は未確認)。
