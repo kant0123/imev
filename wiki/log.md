@@ -50,6 +50,6 @@ grep "^## \[" wiki/log.md | tail -5
 - 更新: [[overview]], [[rerank-poc]], [[recurring-review-findings]]
 - 備考: Ohagey を評価(精度は PoC と同等、遅く x64 専用)したうえで Mozc 本家に載せた。サンドボックスで DLL が読めない・同版 MSI が上書きしない・ユーザー履歴が LM より後に効く・かな候補を LM が過大評価する、を踏んで記録。Issue #10。
 
-## [2026-10-04] ingest | PR #? テンプレートの Web 前提をデスクトップ IME 向けに調整(CI・agy レビューのドメイン)
+## [2026-10-04] ingest | PR #19 テンプレートの Web 前提をデスクトップ IME 向けに調整(CI・agy レビューのドメイン)
 - 更新: [[overview]], [[mozc-build-install]], [[mozc-context-rerank]]
 - 備考: CI は requirements.txt が無いと何も検査せず緑になっていた。パッチの当たり・テスト・構文・BOM を見る形に置き換え、Mozc のビルドは CI に載せない判断を [[overview]] に記録。agy レビューの既定ドメインを Web 向けの general から ime に変えた。Issue #13。
