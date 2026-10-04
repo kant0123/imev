@@ -54,6 +54,6 @@ grep "^## \[" wiki/log.md | tail -5
 - 更新: [[overview]], [[mozc-build-install]], [[mozc-context-rerank]], [[recurring-review-findings]]
 - 備考: CI は requirements.txt が無いと何も検査せず緑になっていた。パッチの当たり・テスト・構文・BOM を見る形に置き換え、Mozc のビルドは CI に載せない判断を [[overview]] に記録。agy レビューの既定ドメインを Web 向けの general から ime に変えた。Issue #13。
 
-## [2026-10-05] ingest | PR #NN Chrome で自前ビルドの Mozc が使えない原因(ESET)を導入手順に記録
+## [2026-10-05] ingest | PR #24 Chrome で自前ビルドの Mozc が使えない原因(ESET)を導入手順に記録
 - 更新: [[mozc-build-install]]
 - 備考: コードの不具合ではなく、ESET の「すべてのブラウザーを保護」が署名の無い `mozc_tip64.dll` を Chrome に読み込ませていなかった。ESET に DLL の除外設定は無く、保護を無効にして解消。Issue #14。
