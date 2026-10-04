@@ -55,6 +55,6 @@ grep "^## \[" wiki/log.md | tail -5
 - 備考: CI は requirements.txt が無いと何も検査せず緑になっていた。パッチの当たり・テスト・構文・BOM を見る形に置き換え、Mozc のビルドは CI に載せない判断を [[overview]] に記録。agy レビューの既定ドメインを Web 向けの general から ime に変えた。Issue #13。
 
 ## [2026-10-05] ingest | PR #21 使っていないテンプレート由来の CD 一式と記入例を取り除く
-- 更新: [[overview]]
+- 更新: [[overview]], [[recurring-review-findings]]
 - 備考: `deploy/`・deploy ワークフロー・テンプレート用の `scripts/setup.*`、docs と review/README の CD 前提の記述(本番同居・`/healthz`・方式 B)を削除。branch-protection.json の必須チェック名を旧 `test` から現行の `checks` / `mozc-patch` に直した(未適用。main は保護されていない)。Issue #18。
 

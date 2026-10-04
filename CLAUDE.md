@@ -83,7 +83,7 @@ HEAD の奪い合いで自分のコミットが他人のブランチに乗るた
 | --- | --- |
 | 着手 — Wiki を読む / Issue を確保する / worktree を切る | `worktree-start` |
 | 実装後 — 変更を `wiki/` に反映する | `wiki-ingest` |
-| 完了 — PR 作成 / CI / マージ / 後始末 / デプロイ確認 | `pr-finish` |
+| 完了 — PR 作成 / CI / マージ / 後始末 / メインツリー更新 | `pr-finish` |
 | CI 緑の後・マージ前 — 差分を agy でレビューし、差し戻しを評価する | `agy-review` |
 | 作業中 — スコープ外の問題を起票する | `file-issue` |
 

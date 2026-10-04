@@ -130,7 +130,7 @@ gh api --method PUT repos/kant0123/imev/branches/main/protection \
 ```
 
 同梱の [.github/branch-protection.json](../.github/branch-protection.json) は
-`test` を必須チェックにする。採用していないワークフローの名前は `contexts` から
+`checks` と `mozc-patch` を必須チェックにする。採用していないワークフローの名前は `contexts` から
 外すこと — **一度も実行されないチェックを必須にすると、PR が永久に pending のまま
 マージできなくなる。**
 
