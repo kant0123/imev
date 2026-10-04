@@ -19,7 +19,14 @@ if ($p.ExitCode -notin 0, 3010) { throw "msiexec exit $($p.ExitCode)" }
 # 実行ファイルと同じ場所(<exe dir>\rerank)なら読める。
 $dst = Join-Path ${env:ProgramFiles(x86)} 'Mozc\rerank'
 New-Item -ItemType Directory -Force $dst | Out-Null
-Copy-Item (Join-Path $RuntimeDir '*') $dst -Force
+# インストール中のキー入力でサーバーが起動し、古い llama.dll / モデルを掴んでいるとコピーが失敗する。
+# 直前に止め、それでも掴まれたら止め直して再試行する
+for ($i = 1; ; $i++) {
+    Get-Process mozc_server -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Milliseconds 500
+    try { Copy-Item (Join-Path $RuntimeDir '*') $dst -Force; break }
+    catch { if ($i -ge 5) { throw } }
+}
 # 次のキー入力で新しいサーバーが起動する
 Get-Process mozc_server -ErrorAction SilentlyContinue | Stop-Process -Force
 Write-Host "installed: $dst"
