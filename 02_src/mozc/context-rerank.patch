@@ -44,10 +44,10 @@ index 4bbcdde..78da6c2 100644
          ":dice_rewriter",
 diff --git a/src/rewriter/context_rerank_rewriter.cc b/src/rewriter/context_rerank_rewriter.cc
 new file mode 100644
-index 0000000..2c9cfd7
+index 0000000..43c7751
 --- /dev/null
 +++ b/src/rewriter/context_rerank_rewriter.cc
-@@ -0,0 +1,131 @@
+@@ -0,0 +1,133 @@
 +#include "rewriter/context_rerank_rewriter.h"
 +
 +#include <algorithm>
@@ -147,6 +147,8 @@ index 0000000..2c9cfd7
 +
 +    std::vector<std::string> values;
 +    for (size_t i : slots) values.push_back(seg->candidate(i).value);
++    // Earlier segments of this conversion were appended; keep the window bounded.
++    context = Tail(context, kMaxContextChars);
 +    const std::vector<double> lp = scorer.Score(context, seg->key(), values);
 +    if (lp.size() != n) {
 +      context += seg->candidate(0).value;

@@ -47,5 +47,5 @@ grep "^## \[" wiki/log.md | tail -5
 
 ## [2026-10-04] ingest | PR #12 Mozc に文脈リランカーを載せるパッチと導入手順を追加
 - 新規: [[mozc-context-rerank]], [[mozc-build-install]], [[engine-base-choice]]
-- 更新: [[overview]], [[rerank-poc]]
+- 更新: [[overview]], [[rerank-poc]], [[recurring-review-findings]]
 - 備考: Ohagey を評価(精度は PoC と同等、遅く x64 専用)したうえで Mozc 本家に載せた。サンドボックスで DLL が読めない・同版 MSI が上書きしない・ユーザー履歴が LM より後に効く・かな候補を LM が過大評価する、を踏んで記録。Issue #10。
