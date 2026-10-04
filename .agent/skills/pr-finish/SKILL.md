@@ -3,13 +3,13 @@ name: pr-finish
 description: >
   実装が終わってから PR を作り、CI を通し、マージして後始末するまでの完了手順。
   テスト実行、push、gh pr create の本文テンプレート、CI 確認、マージ、
-  リモートブランチと worktree の削除、Issue クローズ、デプロイの反映確認までを一続きで行う。
+  リモートブランチと worktree の削除、Issue クローズ、メインツリーの更新までを一続きで行う。
   「PR を作って」「マージして」「終わらせて」と言われたときや、
   worktree での実装と wiki 更新が済んだときに使う。
   --fill / Fixes / --delete-branch を使わない理由など、素直にやると失敗する罠がまとまっている。
 ---
 
-# 完了 — PR から反映確認まで
+# 完了 — PR からメインツリーの更新まで
 
 `gh` の既定の使い方(`--fill`、`Fixes #`、`--delete-branch`)は**worktree ベースの運用では
 順に壊れる**。理由は各手順に書いた。
@@ -169,9 +169,8 @@ gh issue close <番号> --comment "<実装内容の要約>"
 
 ## 8. メインツリーを最新にする
 
-このプロジェクトは CD(本番同居チェックアウト)を採用していないので、マージ後はメインツリーで
-`git pull --ff-only origin main` してローカル main を進めてよい。CD を導入したらこの節を
-テンプレートの「デプロイの反映を確認する」に差し替える(`deploy/README.md`)。
+デプロイは無いので、マージ後はメインツリーで `git pull --ff-only origin main` してローカル main を進める。
+Mozc パッチを変えた場合の実機への反映は、必要になったときに `wiki/operations/mozc-build-install.md` の手順で行う。
 
 ## 事前承認の範囲
 
