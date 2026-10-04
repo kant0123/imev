@@ -8,15 +8,12 @@
   `CLAUDE.md` を正とする。
 - 知識の蓄積(`wiki/`)については [wiki_workflow.md](wiki_workflow.md) を参照。
   仕様は Issue に、実装後の現状は `wiki/` に置き、**Wiki 更新は機能 PR に同梱する**。
-- CI/CD の導入有無・方式はプロジェクトごとに選ぶ(下記「CI/CD の選択」参照)。
-  未導入の場合は該当節を削除してよい。
+- imev は CD を採用していない(配布も本番環境も無い)。CI の内容は下記「CI」を参照。
 
-## 全体像(CI/CD を両方導入した場合の例)
+## 全体像
 
-**PR のマージが先、deploy は最後**(逆ではない)。エージェントが行うのは Issue 起票から
-「CI 緑を確認して PR をマージする」までで、それ以降(main への push → CI → deploy)は
-CI/CD が自動で連鎖する。マージが deploy の引き金であり、deploy の後に別のマージが
-続くわけではない。
+エージェントが行うのは Issue 起票から「CI 緑と agy レビューを確認して PR をマージする」まで。
+マージ後は main への push で CI が再度走るだけで、デプロイは無い。
 
 ```mermaid
 flowchart TD
@@ -36,8 +33,6 @@ flowchart TD
     mainCommit["main に merge commit"]
     mainPush["main への push"]
     mainTests["tests (CI) が main に対して走る"]
-    deploySuccess{"success?"}
-    deploy["deploy (CD, オプション)"]
 
     issue --> worktree --> wikiUpdate --> push --> pr
     pr --> prTests
@@ -50,8 +45,7 @@ flowchart TD
     verdict -->|差し戻し| triage
     triage -->|Yes: 修正して push| worktree
     triage -->|No: すべて誤検知| fp --> merge
-    merge --> mainCommit --> mainPush --> mainTests --> deploySuccess
-    deploySuccess -->|success| deploy
+    merge --> mainCommit --> mainPush --> mainTests
 ```
 
 ## 作業の進め方
@@ -64,7 +58,7 @@ flowchart TD
 | --- | --- | --- |
 | 着手 | `worktree-start` | Wiki を読む → Issue 確保 → `origin/main` から worktree |
 | 実装後 | `wiki-ingest` | 影響ページの更新 → `log.md` 追記 → wiki-lint |
-| 完了 | `pr-finish` | push → PR → CI → (agy レビュー)→ マージ → 後始末 → Issue クローズ → 反映確認 |
+| 完了 | `pr-finish` | push → PR → CI → (agy レビュー)→ マージ → 後始末 → Issue クローズ → メインツリー更新 |
 | CI 緑の後 | `agy-review`(オプション) | agy でレビュー → 差し戻しを評価 → 修正ループ / 誤検知を起票してマージ |
 | 作業中 | `file-issue` | スコープ外の問題をその場で起票(対象の判断・粒度・本文) |
 | 依頼時 | `wiki-lint` | Wiki の健康診断(機械検査 → 矛盾・乖離の洗い出し) |
@@ -118,16 +112,7 @@ git worktree remove ../imev-<名前>
   **マージ自体は成功している**ので、エラーを見てマージ失敗と誤読しないこと
   (リモートブランチ削除に到達しないだけ。`git push origin --delete` で消す)。
 
-## CI/CD の選択
-
-このテンプレートは 3 段階で導入できる。`scripts/setup.ps1` / `scripts/setup.sh` を
-実行すると対話形式で選べる(詳細は [README.md](../README.md))。
-
-| 段階 | 内容 | 必要なもの |
-| --- | --- | --- |
-| なし | ローカルでテストを回すのみ | - |
-| CI のみ(推奨) | push/PR で自動テスト実行 | GitHub Actions(hosted runner で足りる) |
-| CI + CD | main への push を CI 成功後に自動デプロイ | デプロイ先環境、下記いずれかの CD 方式 |
+## CI
 
 ### ブランチ保護 — これを入れないと CI はゲートにならない
 
@@ -172,62 +157,10 @@ GitHub の画面から押されたマージは素通しになる。
 | 項目 | 内容 |
 | --- | --- |
 | 契機 | `push`(全ブランチ)と `pull_request` |
-| 内容 | 依存インストール + テストコマンド実行(既定は Python/pytest。スタックに合わせて書き換える) |
+| ジョブ | `checks`(Python・シェル・PowerShell の構文、`.ps1` の BOM、review と hook のテスト)と `mozc-patch`(パッチが基準コミットに当たるか) |
 
-### CD(オプション) — `deploy` ワークフロー
-
-[.github/workflows-optional/deploy.yml](../.github/workflows-optional/deploy.yml)
-
-有効化するには `.github/workflows/` にコピーし、下記いずれかの方式を選ぶ。
-
-**A. ホスティング先の自動デプロイに任せる**(Vercel / Render / Railway など)
-このテンプレートの deploy.yml は不要。ホスティング側の「push で自動デプロイ」を使う。
-エージェント側のルールは CI を通すところまでで完結する。
-
-**B. 自前サーバーへ self-hosted runner でデプロイ**
-開発機と本番機が同一マシンという構成(小規模な自宅サーバー運用などで有効)。
-
-- **runner はサービスとして常駐させること。** `run.cmd` / `./run.sh` での対話起動は端末を
-  閉じた時点で死に、以後 push しても deploy ジョブが起動しない状態が無言で続く。
-  登録・サービス化・実行アカウント(見える環境変数が変わる)の選び方は
-  [deploy/README.md](../deploy/README.md) の「runner のサービス化」を参照。
-- 発火条件: `tests` が **main への push** で **success** し、
-  リポジトリ変数 `SELF_HOSTED_DEPLOY` が `true` のときだけ実行(既定は無効=常にスキップ)。
-- 実処理は [deploy/auto_deploy.ps1.example](../deploy/auto_deploy.ps1.example) に委譲する。
-  変更検知・drift 検知・CI 再確認(フェイルクローズ)・デプロイ前バックアップ・
-  反映確認・失敗時ロールバック・通知・履歴記録を行う。
-  導入手順と落とし穴は [deploy/README.md](../deploy/README.md) にまとめてある。
-- **この方式を採る場合、`CLAUDE.md` の「[オプション] 本番同居チェックアウトの追加ルール」を
-  有効化すること。** メインツリーの HEAD は CD だけが前進させる(エージェントが
-  `git checkout` / `git merge` / `git pull` で先回りすると CD が no-op になり、
-  本番が古いコードのまま取り残される)。
-- **アプリの `/healthz` に稼働中コミットの short SHA を出すこと。** ツリーの HEAD ではなく
-  プロセスが実際に読み込んだコミットが要る。ヘルスチェックが 200 を返すだけでは
-  「古いプロセスが生き残っている」状態を検知できない。
-- **`.ps1` は UTF-8 (BOM 付き) で保存すること。** BOM が無いと Windows PowerShell 5.1 が
-  CP932 として読み、日本語が化けてパースエラーになる(スクリプトが 1 行も動かない)。
-- 死活監視が要るなら [deploy/watchdog.ps1.example](../deploy/watchdog.ps1.example) を
-  タスクスケジューラ / cron へ登録する。CD は「更新があるとき」しか走らないため、
-  プロセスが落ちたままの状態は CD では埋められない。
-
-#### デプロイ結果の読み方
-
-job summary、または実行ログの `::notice::deploy result:` 行に `status` が出る。
-
-| status | 意味 | 終了コード |
-| --- | --- | --- |
-| `deployed` | 実際に前進して反映した | 0 |
-| `no-op` | 更新なし。稼働中コミットも HEAD と一致(正常) | 0 |
-| `skipped` | 更新はあったが CI が success でないため見送った | 0 |
-| `drift` | 更新なしだが**稼働中コミットが HEAD と違う**(本番が古いまま。要再起動) | 1 |
-| `blocked` | メインツリーに未コミットの変更があり、前進していない(退避してから再実行) | 1 |
-| `down` | 更新なしで、かつヘルスチェックへ接続できない(プロセス停止) | 1 |
-| `rolled_back` | デプロイに失敗し、直前コミットへ戻して復旧した | 1 |
-| `failed` | デプロイに失敗し、ロールバックも失敗した(手動対応) | 1 |
-| `error` | 想定外の例外 | 1 |
-
-履歴は `logs/deploy-history.jsonl`(git 管理外)にも 1 行ずつ残る。Actions の実行履歴は
-保持期間で消え、手動実行分は残らないため。
+Mozc のビルドは CI に載せない。理由は [wiki/overview.md](../wiki/overview.md) の「運用」。
+CD は採用していない。
 
 ### `wiki-check`(オプション)
 
@@ -253,9 +186,8 @@ Wiki 更新が不要な PR には `wiki:skip` ラベルを付ける。
 - **Wiki を運用するなら実質的に必須。** エージェントは 1 ページ内で完結する規約(frontmatter を
   書く、テンプレートに従う)はよく守るが、Wiki 全体にまたがる大域的な一貫性は自然には保てない。
   壊れるのは常に後者なので、機械に見張らせる。
-- **`tests` に相乗りさせない。** CD(方式 B)は `workflow_run` で CI ワークフロー全体の
-  conclusion を待つため、テストに wiki-lint を足すと**Wiki の不整合 1 件で本番デプロイが止まる**。
-  デプロイの可否と無関係な検査は独立したワークフローに分ける。
+- **`tests` に相乗りさせない。** Wiki の不整合 1 件でテストのワークフロー全体が赤くなり、
+  コードの検査結果と混ざるため、独立したワークフローに分ける。
 - `fetch-depth: 0` が要る。`updated` を各ファイルの最終コミット日と突き合わせるため、既定の
   浅いクローンでは履歴が足りず、**スクリプトは日付の検査を黙って飛ばす**(通っているのに
   何も見ていない状態になる)。
@@ -276,7 +208,7 @@ CI のワークフローではなく、**CI が緑になった後にエージェ
 - `gh pr merge` の hook がレビュー記録(差し戻しなら評価の記録も)を確認する。
 - 前提: `agy` がインストール・ログイン済みで、PATH に通っていること。
 - **導入直後は強制が効かない。** hook もスクリプトもメインツリーから読まれるため、導入 PR が
-  メインツリーに反映されるまで(方式 B ならデプロイ完了まで)はレビューを素通しする。
+  メインツリーに反映されるまではレビューを素通しする。
   導入手順と注意点は [review/README.md](../review/README.md) の「導入するときの注意」。
 - ドメイン不変条件は `--domain` か環境変数 `REVIEW_DOMAIN` で切り替える
   (`ime` / `general` / `fintech` / `distributed` / `healthcare` / `embedded`)。未設定なら `ime`
@@ -293,7 +225,7 @@ GitHub Issues / Projects 連携を使う場合の補助ワークフロー。Issu
 
 | 禁止 | 理由 |
 | --- | --- |
-| メインツリーで `git checkout` / `git merge` / `git pull`(方式 B を採用している場合) | 複数セッションの HEAD 奪い合い、または CD の変更検知の無効化 |
+| 実装作業をメインツリーで行う | 複数セッションの HEAD 奪い合い |
 | main へ直接 push・直接マージ | CI がゲートとして機能しない(マージ後に走るだけになる) |
 | `git add -A` / `git add .` | 他セッションの未コミット変更を巻き込む |
 | `gh pr create --fill` | PR 本文が規約(対応 Issue / Wiki)を満たさなくなる |
@@ -309,19 +241,3 @@ GitHub Issues / Projects 連携を使う場合の補助ワークフロー。Issu
 | `Permission denied` で削除できない | ディレクトリに ReadOnly 属性が付いている(クラウドストレージのミラー同期・バックアップツールが親を掴んでいる場合など)。`scripts/worktree-cleanup.ps1` で属性を外してから git に削除させる |
 | `fatal: ... is not a working tree` で `--force` も効かない | 一度削除に失敗した後の状態。手で消さず `scripts/worktree-cleanup.ps1`(引数なし)で孤立エントリを掃除する |
 | `git worktree list` に出ないディレクトリが残っている | 削除失敗の残骸。`-RemoveDirs` で消せるが**未コミットの変更ごと消える**ので中身を確認してから |
-
-## トラブルシュート(CD 方式 B を採用している場合)
-
-| 症状 | 確認すること |
-| --- | --- |
-| デプロイしたのに反映されない | ヘルスチェックの `commit` と `origin/main` を比較。不一致なら CD が no-op になっている(→ メインツリーの HEAD を誰かが先に進めていないか)。この状態は `status: drift` として自動検知される |
-| `deploy` が success なのに何も起きていない | `status` を見る。`no-op`(更新なし)か `skipped`(CI が緑でない)。どちらも success で終わる |
-| `deploy` が起動しない | `tests` が main の push で success したか / `SELF_HOSTED_DEPLOY` が `true` か / runner がオンラインか(`Get-Service actions.runner.*` が `Running`。対話起動のままだと端末を閉じた時点で落ちている → サービス化する) |
-| runner はオンラインなのに環境変数が空 / 認証に失敗する | サービスの実行アカウントを確認する(`Get-CimInstance Win32_Service -Filter "Name like 'actions.runner%'"` の `StartName`)。既定の `NETWORK SERVICE` からはユーザー環境変数もユーザープロファイル配下のパスも見えない |
-| 環境変数を直したのに反映されない | runner は起動時の環境変数を引き継ぐ。`Restart-Service actions.runner.*` / `svc.sh stop && start` で再起動する |
-| `git merge --ff-only` に失敗 | **メッセージは「分岐している可能性」と出るが、原因は未コミット変更のことが多い。** `git status` を先に見る。分岐しているなら手動で調査が必要 |
-| `status: blocked` で止まる | メインツリーに未コミットの変更が残っている。commit / stash して退避してから deploy を再実行する。この中止は**意図的** — そのまま進めると merge が失敗し、ロールバックの `git reset --hard` がその変更を消してしまう |
-| ジョブがパースエラーで即座に落ちる(`Unexpected token '繝…'` のような文字化け) | `.ps1` の BOM 欠落。UTF-8 (BOM 付き) で保存し直す。**同時にワークフローを `shell: pwsh` に変える** — ツリー上のスクリプトは前進しないと直らないが、ワークフロー YAML は main から読まれるので即座に効く |
-| 導入直後、`auto_deploy.ps1` が見つからずジョブが失敗する | 初回だけ人間がメインツリーを手動で fast-forward する(deploy/README.md「落とし穴」) |
-| スクリプトを直したのに挙動が変わらない | デプロイスクリプト自身の変更は 1 デプロイ遅れて効く(実行されるのは merge 前の版) |
-| 正常なコミットが毎回ロールバックされる | ヘルスチェック URL(ポート)がアプリの設定とずれている。`APP_HEALTH_URL` を直す |
