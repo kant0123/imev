@@ -12,7 +12,8 @@ Get-Process $procs -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Process msiexec.exe -ArgumentList '/x', $Msi, '/passive', '/norestart' -Wait
 Get-Process $procs -ErrorAction SilentlyContinue | Stop-Process -Force
 $p = Start-Process msiexec.exe -ArgumentList '/i', $Msi, 'REINSTALLMODE=amus', '/passive', '/norestart' -Wait -PassThru
-if ($p.ExitCode -ne 0) { throw "msiexec exit $($p.ExitCode)" }
+# 3010 = 成功(再起動が必要)。/norestart なので再起動はせず、そのまま配置まで進める
+if ($p.ExitCode -notin 0, 3010) { throw "msiexec exit $($p.ExitCode)" }
 
 # サーバーは低整合性のサンドボックスで動き、ユーザープロファイル配下を読めない。
 # 実行ファイルと同じ場所(<exe dir>\rerank)なら読める。

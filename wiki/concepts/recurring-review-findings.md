@@ -58,6 +58,7 @@ push 前に確かめること:
 - PR #33 — `review/agy_review.py has_unverified_critical()` — 評価の理由文に「未確認」があるだけで判定語と取り違えていた
 - PR #33 — `review/agy_review.py has_unverified_critical()` — 過去の評価も見ていて、記録し直しても差し止めが解けなかった
 - imev PR #2 — `02_src/poc/run_eval.py fetch_models()` — 例外を出さない `sh()` で GGUF のメタデータ書き換えを呼び、失敗しても出力ファイルが無いまま後段のベンチへ進んでいた
+- imev PR #12 — `02_src/mozc/reinstall.ps1` — msiexec の 3010(成功・要再起動)を失敗として止め、ランタイムの配置に進まなかった
 
 ### 新しく足した分岐・関数にテストが無い
 

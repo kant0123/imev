@@ -31,6 +31,8 @@ Mozc 自体のビルド環境(bazelisk・LLVM・MSYS2・Qt)は Mozc の `docs/bu
 - **同じバージョンの MSI は既存ファイルを上書きしない**(ログに「Existing file is of an equal version」)。
   インストールは成功扱いで古いサーバーが残る。`reinstall.ps1` はプロセスを止め、
   アンインストール → `REINSTALLMODE=amus` で入れる。反映はハッシュで確かめる。
+- **管理者で起動した PowerShell からはネットワークドライブ(割り当てた G: など)が見えない。** `reinstall.ps1` を
+  ネットワークドライブ上から管理者実行すると、何も出力せずに失敗する。ローカルドライブにコピーして実行する。
 - **Git Bash からは Bazel のターゲット名(`//...`)が MSYS にパス変換される。** `MSYS_NO_PATHCONV=1`。
 - TSF は mozc_tip32/64 の両方が入り、変換は共通の mozc_server で行う。リランカーはサーバー側なので
   32 ビットアプリでも同じく効く想定(32 ビットアプリでの動作は未確認)。
