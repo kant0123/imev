@@ -69,3 +69,7 @@ grep "^## \[" wiki/log.md | tail -5
 ## [2026-10-05] query | PR #26 Issue #25 ESET の保護を有効にしたまま自前ビルドの Mozc を Chrome で使う方法の検証
 - 更新: [[mozc-build-install]]
 - 備考: 自己署名で署名した TIP DLL は、署名のみでも、証明書を Windows の信頼ストアに入れた場合でも Chrome で読み込まれなかった。正規の署名証明書・ESET への提出は未検証で、個人利用では見合わないとして保護を無効にする運用のまま閉じた。
+
+## [2026-10-05] query | PR #27 ESET の回避策で「TIP DLL はビルドのたびに変わる」とした誤りを直す
+- 更新: [[mozc-build-install]]
+- 備考: パッチは src/rewriter/ だけを触り、TIP DLL はリランカーの再ビルドでリンクし直されない(成果物の更新時刻で確認)。ESET への提出を「毎回の依頼になる」として退けた判断を取り消し、Google 日本語入力が同じ ESET 環境で動くという google/mozc discussion #805 の報告を足した。Issue #25 は開き直した。
