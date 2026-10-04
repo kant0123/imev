@@ -54,6 +54,14 @@ grep "^## \[" wiki/log.md | tail -5
 - 更新: [[overview]], [[mozc-build-install]], [[mozc-context-rerank]], [[recurring-review-findings]]
 - 備考: CI は requirements.txt が無いと何も検査せず緑になっていた。パッチの当たり・テスト・構文・BOM を見る形に置き換え、Mozc のビルドは CI に載せない判断を [[overview]] に記録。agy レビューの既定ドメインを Web 向けの general から ime に変えた。Issue #13。
 
+## [2026-10-05] ingest | PR #21 使っていないテンプレート由来の CD 一式と記入例を取り除く
+- 更新: [[overview]], [[recurring-review-findings]]
+- 備考: `deploy/`・deploy ワークフロー・テンプレート用の `scripts/setup.*`、docs と review/README の CD 前提の記述(本番同居・`/healthz`・方式 B)を削除。branch-protection.json の必須チェック名を旧 `test` から現行の `checks` / `mozc-patch` に直した(未適用。main は保護されていない)。Issue #18。
+
+## [2026-10-05] ingest | PR #23 main のブランチ保護の適用を記録
+- 更新: [[overview]], [[recurring-review-findings]]
+- 備考: 必須チェック `checks` / `mozc-patch` で main を保護した(Issue #18 の項目の「未適用」はこの時点で古くなった)。保護は GitHub 側の設定でファイルから見えないため、適用済みであることとジョブ名を変えるときの注意を overview と test.yml に残し、必須チェック名とジョブ名の一致を CI(checks ジョブ)でも検査するようにした。Issue #22。
+
 ## [2026-10-05] ingest | PR #24 Chrome で自前ビルドの Mozc が使えない原因(ESET)を導入手順に記録
 - 更新: [[mozc-build-install]]
 - 備考: コードの不具合ではなく、ESET の「すべてのブラウザーを保護」が署名の無い `mozc_tip64.dll` を Chrome に読み込ませていなかった。ESET に DLL の除外設定は無く、保護を無効にして解消。Issue #14。

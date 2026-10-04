@@ -5,6 +5,10 @@ name: tests
 # ここでは「数分で回り、壊れていれば確実に赤になる」検査だけを回す。
 # ビルド・導入・実機での変換確認はローカルで行う(wiki/operations/mozc-build-install.md)。
 #
+# main はブランチ保護で、ジョブ名 checks と mozc-patch を必須チェックにしている。
+# ジョブ名(jobs: 直下のキー)を変えるときは .github/branch-protection.json と GitHub 側の保護設定も
+# 直すこと。ずれると必須チェックが実行されず、PR が永久に pending になる(wiki/overview.md「運用」)。
+#
 # どの検査も「対象が 0 件で成功」に落ちないようにしてある。
 # 黙って何も見ていない緑の CI は、赤い CI より気づきにくい。
 
@@ -40,6 +44,23 @@ jobs:
             exit 1
           fi
           find . -name '*.py' -not -path './.git/*' -print0 | xargs -0 python -m py_compile
+
+      - name: ブランチ保護の必須チェック名とジョブ名の一致
+        # 一致しないと必須チェックが実行されず、PR が永久に pending になる。
+        # 検査できるのは branch-protection.json とこのファイルの整合まで。GitHub 側の設定との食い違いは見えない。
+        run: |
+          python - <<'PY'
+          import json, re, sys
+          contexts = json.load(open('.github/branch-protection.json', encoding='utf-8'))['required_status_checks']['contexts']
+          workflow = open('.github/workflows/test.yml', encoding='utf-8').read()
+          jobs = re.findall(r'^  ([A-Za-z0-9_-]+):\s*$', workflow.split('\njobs:\n', 1)[1], re.M)
+          print('必須チェック:', contexts, '/ ジョブ:', jobs)
+          if not contexts:
+              sys.exit('::error::必須チェックが 0 件(branch-protection.json の読み取りが壊れている)')
+          missing = [c for c in contexts if c not in jobs]
+          if missing:
+              sys.exit(f'::error::必須チェック {missing} に対応するジョブが test.yml に無い。ジョブ名を変えたなら branch-protection.json と GitHub 側の保護設定も直す')
+          PY
 
       - name: agy レビューの回帰テスト
         run: |
