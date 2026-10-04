@@ -62,3 +62,6 @@ grep "^## \[" wiki/log.md | tail -5
 - 更新: [[overview]], [[recurring-review-findings]]
 - 備考: 必須チェック `checks` / `mozc-patch` で main を保護した(Issue #18 の項目の「未適用」はこの時点で古くなった)。保護は GitHub 側の設定でファイルから見えないため、適用済みであることとジョブ名を変えるときの注意を overview と test.yml に残し、必須チェック名とジョブ名の一致を CI(checks ジョブ)でも検査するようにした。Issue #22。
 
+## [2026-10-05] ingest | PR #24 Chrome で自前ビルドの Mozc が使えない原因(ESET)を導入手順に記録
+- 更新: [[mozc-build-install]]
+- 備考: コードの不具合ではなく、ESET の「すべてのブラウザーを保護」が署名の無い `mozc_tip64.dll` を Chrome に読み込ませていなかった。ESET に DLL の除外設定は無く、保護を無効にして解消。Issue #14。

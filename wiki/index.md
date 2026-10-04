@@ -35,7 +35,7 @@ Wiki 全ページのカタログ。質問に答えるとき・作業に着手す
 
 ## Operations — 運用手順・障害対応 (`operations/`)
 
-- [[mozc-build-install]] — リランカー入り Mozc のビルドと入れ直し(Windows)。UNC パス不可・同版 MSI が上書きしない・反映確認はハッシュで
+- [[mozc-build-install]] — リランカー入り Mozc のビルドと入れ直し(Windows)。UNC パス不可・同版 MSI が上書きしない・反映確認はハッシュで・ESET が Chrome で止める
 <!-- wiki-index:end -->
 
 ## 未作成ページ (リンクだけ存在する / これから書く)
