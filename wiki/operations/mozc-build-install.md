@@ -2,7 +2,7 @@
 type: operation
 summary: リランカー入り Mozc のビルドと入れ直し(Windows)。UNC パス不可・同版 MSI が上書きしない・反映確認はハッシュで
 updated: 2026-10-04
-related: [mozc-context-rerank]
+related: [mozc-context-rerank, overview]
 ---
 
 # リランカー入り Mozc のビルドと導入
@@ -12,7 +12,8 @@ Mozc 自体のビルド環境(bazelisk・LLVM・MSYS2・Qt)は Mozc の `docs/bu
 
 ## 手順
 
-1. google/mozc を **ローカルドライブ**(例 `C:\mozc`)に clone し、c7538e6 を checkout して Qt を用意する。
+1. google/mozc を **ローカルドライブ**(例 `C:\mozc`)に clone し、基準コミット(`02_src/mozc/mozc-base-commit.txt`、
+   現在 c7538e6)を checkout して Qt を用意する。
 2. `02_src/mozc/setup.ps1 -MozcRoot C:\mozc` — パッチ適用、llama.cpp ヘッダ、ランタイム DLL とモデル
    (`%LOCALAPPDATA%\MozcRerank`)を揃える。再実行してよい(当て済みなら飛ばす)。
 3. `src` で `bazelisk build package --config release_build`(Git Bash からなら `MSYS_NO_PATHCONV=1` を付ける)。
@@ -21,6 +22,12 @@ Mozc 自体のビルド環境(bazelisk・LLVM・MSYS2・Qt)は Mozc の `docs/bu
 5. 反映の確認: `C:\Program Files (x86)\Mozc\mozc_server.exe` と
    `bazel-out/x64_windows-opt-ST-*/bin/server/mozc_server.exe.exe` の sha256 が一致すること。
    次にキーを打つと新しいサーバーが起動し、`AppData\LocalLow\Mozc\rerank.log` に `load: ready` が出る。
+
+## 基準コミットを上げるとき
+
+`02_src/mozc/mozc-base-commit.txt` の SHA だけを書き換える。CI の `mozc-patch` ジョブがこのファイルを読み、
+パッチがそのコミットに当たるかを見る。当たっても**コンパイルと挙動は CI では分からない**ので、
+上の手順 1〜5 と実際の変換確認までやり直す。
 
 ## 落とし穴
 

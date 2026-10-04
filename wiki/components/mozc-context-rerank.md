@@ -9,7 +9,8 @@ related: [rerank-poc, mozc-build-install, engine-base-choice, overview]
 
 [[rerank-poc]] の採点方式を C++ に移し、Mozc 本家の Rewriter として組み込んだもの。
 変換のたびに、カーソル左の文を文脈にして上位候補を zenz-v3.1-small で採点し並べ替える。
-リポジトリには google/mozc c7538e6 へのパッチとして置いている(Mozc 本体は取り込まない)。
+リポジトリには google/mozc の基準コミット(`02_src/mozc/mozc-base-commit.txt`、現在 c7538e6)へのパッチとして置いている
+(Mozc 本体は取り込まない)。パッチが当たるかは CI が見るが、ビルドはしない([[overview]] の「運用」)。
 
 ## 責務
 

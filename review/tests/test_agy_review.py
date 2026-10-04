@@ -274,6 +274,16 @@ def test_prompt_ends_with_environment_note(tmp_path):
     assert "transcript_full.jsonl" in ar.TOOL_DENIED_NOTE
 
 
+def test_fallback_domain_is_defined_and_embedded(tmp_path):
+    # 既定ドメインを domain_invariants.json に足し忘れると、毎回のレビューが ReviewError で止まる。
+    assert ar.FALLBACK_DOMAIN == "ime"
+    invariants = json.loads(ar.INVARIANTS_FILE.read_text(encoding="utf-8"))
+    info = invariants[ar.FALLBACK_DOMAIN]
+    prompt = ar.build_prompt("diff --git a/x b/x", ar.FALLBACK_DOMAIN, tmp_path, [], ["x"])
+    assert f"## ドメイン不変条件: {info['name']}" in prompt
+    assert all(f"- {rule}" in prompt for rule in info["critical_rules"])
+
+
 # --- スナップショットの展開 -----------------------------------------------------
 def make_tar(entries):
     """entries: [(name, bytes | None, type)]。type は tarfile の型定数。"""

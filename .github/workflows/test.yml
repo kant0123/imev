@@ -1,49 +1,124 @@
 name: tests
 
-# CI(常時導入を推奨)。push/PR のたびにテストを自動実行する。
-# 既定は Python + pytest。他スタックの場合は setup ステップとテストコマンドを書き換える。
+# imev は Windows 上の IME(Mozc へのパッチ + PoC)で、Mozc 本体のビルドは
+# Bazel + MSVC + Qt で数十分〜数時間かかるため CI には載せない。
+# ここでは「数分で回り、壊れていれば確実に赤になる」検査だけを回す。
+# ビルド・導入・実機での変換確認はローカルで行う(wiki/operations/mozc-build-install.md)。
 #
-# テストの仕組みがまだ無いリポジトリ(このテンプレートをコピーした直後)では、
-# 失敗させずに警告だけ出して終わる。**常時赤い CI は「無視するもの」に変わる**ため、
-# 落とすのは「テストがあって落ちた」ときだけにしてある。
+# どの検査も「対象が 0 件で成功」に落ちないようにしてある。
+# 黙って何も見ていない緑の CI は、赤い CI より気づきにくい。
 
 on:
   push:
   pull_request:
 
 jobs:
-  test:
+  checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Detect test setup
-        id: detect
-        run: |
-          if [ -f requirements.txt ] || [ -f pyproject.toml ]; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::requirements.txt / pyproject.toml が無いのでテストを実行していません。スタックに合わせて .github/workflows/test.yml を書き換えてください。"
-          fi
-
       - name: Set up Python
-        if: steps.detect.outputs.found == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: pip
-          cache-dependency-path: requirements.txt
 
-      - name: Install dependencies
-        if: steps.detect.outputs.found == 'true'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Python の構文
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          count=$(find . -name '*.py' -not -path './.git/*' | wc -l)
+          echo "検査した .py: $count 件"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::検査対象の .py が 1 件も見つからない(パスか除外条件が壊れている)"
+            exit 1
+          fi
+          find . -name '*.py' -not -path './.git/*' -print0 | xargs -0 python -m py_compile
 
-      - name: Run tests
-        if: steps.detect.outputs.found == 'true'
-        run: python -m pytest tests/ -v
+      - name: agy レビューの回帰テスト
+        run: |
+          pip install pytest
+          python -m pytest review/tests -q
+
+      - name: Wiki 差し込み hook のテスト
+        # ディレクトリ指定(node --test .claude/hooks/test)は Windows の node で拾えないため、ファイルを並べる。
+        run: node --test .claude/hooks/test/*.test.mjs
+
+      - name: シェルスクリプトの構文
+        run: |
+          status=0
+          count=0
+          while IFS= read -r file; do
+            count=$((count + 1))
+            bash -n "$file" || status=1
+          done < <(find . -name '*.sh' -not -path './.git/*')
+          echo "検査した .sh: $count 件"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::検査対象の .sh が 1 件も見つからない(パスか除外条件が壊れている)"
+            status=1
+          fi
+          exit $status
+
+      - name: PowerShell の構文と BOM
+        shell: pwsh
+        run: |
+          # BOM が無いと Windows PowerShell 5.1 が CP932 として読み、日本語が化けてパースエラーで落ちる。
+          # pwsh 7 は BOM 無しでも読めるので、構文の検査とは別に BOM を見る。
+          $failed = $false
+          $files = @(Get-ChildItem -Recurse -File -Include *.ps1, *.ps1.example)
+          Write-Host "検査した PowerShell: $($files.Count) 件"
+          if ($files.Count -lt 1) {
+            Write-Host "::error::検査対象の .ps1 が 1 件も見つからない(パスか除外条件が壊れている)"
+            exit 1
+          }
+          foreach ($file in $files) {
+            $errors = $null
+            # .example は拡張子が .ps1 でないため、内容を読んでパースする
+            $text = Get-Content -LiteralPath $file.FullName -Raw
+            [System.Management.Automation.Language.Parser]::ParseInput($text, [ref]$null, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              foreach ($e in $errors) {
+                Write-Host "::error file=$($file.FullName),line=$($e.Extent.StartLineNumber)::$($e.Message)"
+              }
+              $failed = $true
+            }
+            $bytes = [System.IO.File]::ReadAllBytes($file.FullName)
+            if ($bytes.Length -lt 3 -or $bytes[0] -ne 0xEF -or $bytes[1] -ne 0xBB -or $bytes[2] -ne 0xBF) {
+              Write-Host "::error file=$($file.FullName)::UTF-8 BOM が無い"
+              $failed = $true
+            }
+          }
+          if ($failed) { exit 1 }
+
+  mozc-patch:
+    # パッチが基準コミットの google/mozc にそのまま当たるか。ビルドはしない。
+    # 基準コミットを上げるときは 02_src/mozc/mozc-base-commit.txt だけを書き換える。
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 基準コミットの google/mozc を取得
+        run: |
+          base=$(tr -d '[:space:]' < 02_src/mozc/mozc-base-commit.txt)
+          if ! [[ "$base" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error file=02_src/mozc/mozc-base-commit.txt::40 桁のコミット SHA ではない: '$base'"
+            exit 1
+          fi
+          git init -q mozc
+          git -C mozc fetch -q --depth 1 --filter=blob:none https://github.com/google/mozc.git "$base"
+          # パッチが触るのは src/rewriter 配下だけ。Mozc 全体の blob は取らない
+          git -C mozc sparse-checkout set src/rewriter
+          git -C mozc checkout -q FETCH_HEAD
+          echo "google/mozc $(git -C mozc rev-parse HEAD)"
+
+      - name: git apply --check
+        run: git -C mozc apply --check --verbose "$GITHUB_WORKSPACE/02_src/mozc/context-rerank.patch"

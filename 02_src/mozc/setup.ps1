@@ -1,7 +1,7 @@
 ﻿# Mozc に文脈リランカーのパッチを当て、ビルドとインストールに要るファイルを揃える。
 # 手順と背景は wiki/operations/mozc-build-install.md。
 param(
-    # google/mozc のチェックアウト(c7538e6 で検証)。UNC パス不可(Qt の configure が通らない)
+    # google/mozc のチェックアウト(基準コミットは mozc-base-commit.txt。CI がパッチの当たりを確かめる)。UNC パス不可(Qt の configure が通らない)
     [string]$MozcRoot = 'C:\mozc',
     # インストール時に Program Files (x86)\Mozc\rerank へコピーする元
     [string]$RuntimeDir = (Join-Path $env:LOCALAPPDATA 'MozcRerank')

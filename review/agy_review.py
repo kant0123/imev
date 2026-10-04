@@ -46,7 +46,9 @@ WORK_DIR = REVIEW_DIR / "work"
 # 実装は Claude 系で行う前提なので、レビューは別系統のモデルに担当させる
 # (自分が書いたコードを自分で採点させない)。速度優先なら gemini-3.8-flash-high。
 DEFAULT_MODEL = os.environ.get("REVIEW_MODEL", "gemini-3.1-pro-high")
-DEFAULT_DOMAIN = os.environ.get("REVIEW_DOMAIN", "general")
+# imev は Windows 常駐 IME なので、Web 向けの general ではなく ime を既定にする。
+FALLBACK_DOMAIN = "ime"
+DEFAULT_DOMAIN = os.environ.get("REVIEW_DOMAIN", FALLBACK_DOMAIN)
 DEFAULT_TIMEOUT_MIN = 15
 # これを超える差分は 1 回のレビューで精度が落ちる。PR を分けるのが本筋。
 DEFAULT_MAX_CHARS = 300_000

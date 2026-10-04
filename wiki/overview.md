@@ -2,7 +2,7 @@
 type: concept
 summary: システム全体像と各ページへの入口
 updated: 2026-10-04
-related: [recurring-review-findings, rerank-poc, mozc-context-rerank, engine-base-choice]
+related: [recurring-review-findings, rerank-poc, mozc-context-rerank, engine-base-choice, mozc-build-install]
 ---
 
 # imev 全体像
@@ -47,4 +47,15 @@ Mozc(オープンソース日本語 IME)に小型の言語モデルを組み込�
 
 ## 運用
 
-<デプロイ・バックアップ・監視の入口。詳細は operations/ の各ページへ>
+配布・デプロイは無い。手元の PC にビルドして入れるだけ([[mozc-build-install]])。
+
+- **CI(`.github/workflows/test.yml`)は Mozc をビルドしない。** Bazel + MSVC + Qt のビルドは数十分以上かかり、
+  Windows ランナーに Qt とツールチェーンを揃える手間も見合わないため。代わりに、数分で回って壊れていれば確実に
+  赤になるものだけを見る: パッチが基準コミット(`02_src/mozc/mozc-base-commit.txt`)の google/mozc に
+  `git apply --check` で当たるか、レビュー基盤と hook のテスト、Python / シェル / PowerShell の構文、`.ps1` の BOM。
+  **CI が緑でもパッチがコンパイルできる保証は無い**ので、パッチを変えたら実機での確認が要る。
+- 導入当初の CI はテンプレートのまま `requirements.txt` の有無で判定していて、何も検査せずに緑になっていた
+  (Issue #13 で置き換え)。どの検査も「対象 0 件で成功」に落ちないようにしてある。
+- agy レビューは IME 向けのドメイン `ime`(`review/domain_invariants.json`)で回す。テンプレート既定の
+  `general` は Web 向け(IDOR・N+1・DB マイグレーション)で、mozc_server を落とさない・入力内容をログに出さない
+  ・キー入力経路の時間上限・サンドボックスといった、この IME で実害に直結する観点を持たなかった。
